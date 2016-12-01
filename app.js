@@ -32,10 +32,10 @@
             }
         },
         chaincode:{
-            zip_url: 'https://github.com/ibm-blockchain/marbles-chaincode/archive/master.zip',
-            unzip_dir: 'marbles-chaincode-master/part1',
-            git_url: 'https://github.com/IBM-Blockchain/marbles-chaincode/tree/master/part1',
-            deployed_name:'d526e457dd3d76bda5ffa4c8e411f4ce5a85303c9d0cf63d8090a6e90ae08b6b567426cbf288977f448a25535d20c0b1c594dddab22098a27dd71a1e05616717'
+            zip_url: 'https://github.com/CCPX-system/CCPX-blockchain/raw/master/GOLANG/ccpx/ccpx.zip',
+            unzip_dir: '/',
+            git_url: 'https://github.com/CCPX-system/CCPX-blockchain/GOLANG/ccpx'
+            ,deployed_name:'53a5f443cdd832f0a8273d5a1ff86a55fa7d0ea14f48dbbeccdd1fec266ca2bac26fcc95497b4095668e95c0ee5753f1b995517a95110779068820d5868842f5'
         }
     };
 
@@ -48,8 +48,12 @@
         //app2.setup(ibc, cc);
 
     // Step 4 ==================================
-        if(cc.details.deployed_name === ""){                //decide if I need to deploy or not
-           // cc.deploy('init', ['a','10','b','5']);
+        if(cc.details.deployed_name === "ccpx"){                //decide if I need to deploy or not
+            g_cc = cc;
+            cc.deploy('init', ['99'], {delay_ms: 30000}, function(e){                       //delay_ms is milliseconds to wait after deploy for conatiner to start, 50sec recommended
+                console.log("success deployed");
+                cb_deployed();
+            });
         }
         else{
             g_cc = cc;
@@ -101,20 +105,37 @@
     app.get('/testGet', function(req, res){
       res.json({"msg":"test"});
     });
-    app.get('/read_a', function(req, res){
-        console.log('got read a request');
-        g_cc.query.query(['a'],function(err,resp){
-            var ss = resp.result.message;
-            res.json({"msg":ss});
-            console.log('success',ss);  
+    app.get('/read', function(req, res){
+        console.log('got read request');
+        g_cc.query.read(['_pointindex'],function(err,resp){
+            if(!err){
+                //var ss = resp.result.message;
+                res.json({"msg":resp});
+                console.log('success',resp);  
+            }else{
+                console.log('fail');
+            }
         });
     });
+    app.get('/read_point', function(req, res){
+        console.log('got read test_marbe request');
+        g_cc.query.read(['AirChina-2016111-'],function(err,resp){
+            if(!err){
+                //var ss = resp.result.message;
+                res.json({"msg":resp});
+                console.log('success',resp);  
+            }else{
+                console.log('fail');
+            }
+        });
+    });
+
     app.get('/read_b', function(req, res){
         console.log('got read b request');
         g_cc.query.query(['b'],function(err,resp){
-            var ss = resp.result.message;
-            res.json({"msg":ss});
-            console.log('success',ss);  
+            //var ss = resp.result.message;
+            res.json({"msg":resp});
+            console.log('success',resp);  
         });
     });
     app.get('/init', function(req, res){
@@ -137,6 +158,52 @@
         g_cc.deploy('init', ['99'],function(){
             console.log('success deploy');
             res.json({"stat": "success deploy"});              
+        });
+    });
+    app.post('/init_point', function(req, res){
+        var seller = req.body.seller;
+        var owner = req.body.owner;
+        var curret_date = new Date();
+        var dateStr = curret_date.getFullYear()+''+curret_date.getMonth()+''+curret_date.getDate();
+        console.log('got init_marble request');
+        g_cc.invoke.init_point([seller+'-'+dateStr+'-',owner],function(err,resp){
+            var ss = resp;
+            res.json({"msg":ss});
+            console.log('success',ss);  
+        });
+    });
+    app.post('/getpointdetail', function(req, res){
+        var id = req.body.point_id;
+        console.log('got read request');
+        g_cc.query.read([id],function(err,resp){
+            if(!err){
+                //var ss = resp.result.message;
+                res.json({"msg":resp});
+                console.log('success',resp);  
+            }else{
+                console.log('fail');
+            }
+        });
+    });
+    app.post('/getpoint', function(req, res){
+        var owner = req.body.owner;        
+        console.log('got getpoint request');
+        g_cc.invoke.findPointWithOwner([owner],function(err,resp){
+            if(!err){
+                //var ss = resp.result.message;
+                g_cc.query.read(['_tmpRelatedPoint'],function(err,resp){
+                    if(!err){
+                        //var ss = resp.result.message;
+                        res.json({"msg":resp});
+                        console.log('success',resp);  
+                    }else{
+                        console.log('fail');
+                    }
+                });  
+            }else{
+                console.log('fail');
+            }
+
         });
     });
      
