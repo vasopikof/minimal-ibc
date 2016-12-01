@@ -35,7 +35,7 @@
             zip_url: 'https://github.com/CCPX-system/CCPX-blockchain/raw/master/GOLANG/ccpx/ccpx.zip',
             unzip_dir: '/',
             git_url: 'https://github.com/CCPX-system/CCPX-blockchain/GOLANG/ccpx'
-            ,deployed_name:'53a5f443cdd832f0a8273d5a1ff86a55fa7d0ea14f48dbbeccdd1fec266ca2bac26fcc95497b4095668e95c0ee5753f1b995517a95110779068820d5868842f5'
+            ,deployed_name:'db86319cf8904c8c89b9d30cb445efa10f685b5d3f4d51913ed0142298bbeffad4e382d4d1aaf4b9077e0bca7388f3bfdf9e0fa0946009c83ac89c3e5983e165'
         }
     };
 
@@ -96,7 +96,7 @@
         //chaincode.query.read(['a']);
         http.listen(3000, function(){
           console.log('listening on *:3000');
-          console.log('avaliable services: testGet,testGetWithParam,testPost,testPostWithParam');
+          
         });
     }
     function cb_invoked(e, a){
@@ -105,9 +105,9 @@
     app.get('/testGet', function(req, res){
       res.json({"msg":"test"});
     });
-    app.get('/read', function(req, res){
+    app.get('/query_point', function(req, res){
         console.log('got read request');
-        g_cc.query.read(['_pointindex'],function(err,resp){
+        g_cc.query.read(['read','_pointindex'],function(err,resp){
             if(!err){
                 //var ss = resp.result.message;
                 res.json({"msg":resp});
@@ -117,9 +117,37 @@
             }
         });
     });
-    app.get('/read_point', function(req, res){
-        console.log('got read test_marbe request');
-        g_cc.query.read(['AirChina-2016111-'],function(err,resp){
+    app.get('/query_tx', function(req, res){
+        console.log('got read request');
+        g_cc.query.read(['read','_minimaltx'],function(err,resp){
+            if(!err){
+                //var ss = resp.result.message;
+                res.json({"msg":resp});
+                console.log('success',resp);  
+            }else{
+                console.log('fail');
+            }
+        });
+    });
+    app.post('/read_key', function(req, res){
+        var key = req.body.key;
+        console.log('got read key request');
+        g_cc.query.read(['read',key],function(err,resp){
+            if(!err){
+                //var ss = resp.result.message;
+                res.json({"msg":resp});
+                console.log('success',resp);  
+            }else{
+                console.log('fail');
+            }
+        });
+    });
+
+    app.post('/query_tx_latest', function(req, res){
+        var seller = req.body.seller;
+        var num = req.body.num;
+        console.log('got read key request');
+        g_cc.query.read(['findLatest',seller,num],function(err,resp){
             if(!err){
                 //var ss = resp.result.message;
                 res.json({"msg":resp});
@@ -172,10 +200,36 @@
             console.log('success',ss);  
         });
     });
+
+    app.post('/record', function(req, res){
+        var id = req.body.id;
+        var sellerA = req.body.sellerA;
+        var sellerB = req.body.sellerB;
+        var userA = req.body.userA;
+        var userB = req.body.userB;
+        var pointA = req.body.pointA;
+        var pointB = req.body.pointB;
+
+
+        var curret_date = new Date();
+        var dateStr = curret_date.getFullYear()+''+curret_date.getMonth()+''+curret_date.getDate();
+        var tmpID = sellerA+'-'+sellerB+'-'+dateStr+'-'+id;
+        console.log('got init_transaction request');
+        g_cc.invoke.init_transaction([tmpID,userA,userB,pointA,pointB],function(err,resp){
+            var ss = resp;
+            res.json({
+                "msg":ss,
+                "is_success":true,
+                "record_id":id
+            });
+            console.log('success',ss);  
+        });
+    });
+
     app.post('/getpointdetail', function(req, res){
         var id = req.body.point_id;
         console.log('got read request');
-        g_cc.query.read([id],function(err,resp){
+        g_cc.query.read('read',[id],function(err,resp){
             if(!err){
                 //var ss = resp.result.message;
                 res.json({"msg":resp});
@@ -191,13 +245,14 @@
         g_cc.invoke.findPointWithOwner([owner],function(err,resp){
             if(!err){
                 //var ss = resp.result.message;
-                g_cc.query.read(['_tmpRelatedPoint'],function(err,resp){
+                console.log("get _tmpRelatedPoint");
+                g_cc.query.read(['read','_tmpRelatedPoint'],function(err,resp){
                     if(!err){
                         //var ss = resp.result.message;
                         res.json({"msg":resp});
                         console.log('success',resp);  
                     }else{
-                        console.log('fail');
+                        console.log('fail',err);
                     }
                 });  
             }else{
