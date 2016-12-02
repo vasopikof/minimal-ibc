@@ -35,7 +35,7 @@
             zip_url: 'https://github.com/CCPX-system/CCPX-blockchain/raw/master/GOLANG/ccpx/ccpx.zip',
             unzip_dir: '/',
             git_url: 'https://github.com/CCPX-system/CCPX-blockchain/GOLANG/ccpx'
-            ,deployed_name:'db86319cf8904c8c89b9d30cb445efa10f685b5d3f4d51913ed0142298bbeffad4e382d4d1aaf4b9077e0bca7388f3bfdf9e0fa0946009c83ac89c3e5983e165'
+            ,deployed_name:'0baf08a4ff8901d3b568121d631d117c83c0fa1f46ed3f9b4a4487802a08b2bf7e1994f3d5a59faa3adf736ce566f3a3e2558d168d805e890ff3de54f5bb4559'
         }
     };
 
@@ -102,6 +102,112 @@
     function cb_invoked(e, a){
         console.log('response: ', e, a);
     }
+
+
+
+//-------------------------------------------------------------------------------------
+//-----------------API FOR PROD--------------------------------------------------------
+
+    app.post('/getLatExRec', function(req, res){
+        var seller = req.body.SELLER_ID;
+        var num = req.body.RECORD_NUM;
+        console.log('got getLatExRec request');
+        g_cc.query.read(['findLatest',seller,num],function(err,resp){
+            if(!err){
+
+                var pre = JSON.parse(resp);
+                if (pre.tx == null){
+                    res.json({
+                        "respond":401,
+                        "content":null
+                    });
+                    return;
+                }
+                var len = (pre.tx.length);
+                for(var i =0 ;i <len;i++){
+                    var ms = pre.tx[i].EX_TIME;
+                    console.log(ms);
+                    var m = new Date(parseInt(ms));
+                    console.log(m);
+                    pre.tx[i].EX_TIME = m.getFullYear()+'/'+padZ((m.getMonth()+1))+'/'+padZ(m.getDate())+" "+padZ(m.getHours())+":"+padZ(m.getMinutes())+":"+padZ(m.getSeconds());
+                }
+
+                res.json({
+                    "respond":300,
+                    "content":pre.tx
+                });
+                console.log('success',pre);  
+            }else{
+                console.log('fail');
+            }
+        });
+    });
+
+    app.post('/getToExPo', function(req, res){
+        var seller = req.body.SELLER_ID;
+        var from = req.body.START_TIME;
+        var to = req.body.END_TIME;
+        
+        console.log('got getToExPo request from:'+from+"==to:"+to);
+        g_cc.query.read(['findRange',seller,Date.parse(from).toString(),Date.parse(to).toString()],function(err,resp){
+            if(!err){
+                var pre = JSON.parse(resp);
+                if (pre.tx == null){
+                    res.json({
+                        "respond":401,
+                        "content":null
+                    });
+                    return;
+                }
+                var len = (pre.tx.length);
+                for(var i =0 ;i <len;i++){
+                    var ms = pre.tx[i].EX_TIME;
+                    console.log(ms);
+                    var m = new Date(parseInt(ms));
+                    console.log(m);
+                    pre.tx[i].EX_TIME = m.getFullYear()+'/'+padZ((m.getMonth()+1))+'/'+padZ(m.getDate())+" "+padZ(m.getHours())+":"+padZ(m.getMinutes())+":"+padZ(m.getSeconds());
+                }
+
+                res.json({
+                    "respond":300,
+                    "content":pre.tx
+                });
+                console.log('success',pre);   
+            }else{
+                console.log('fail');
+            }
+        });
+    });
+
+    app.post('/responseStore', function(req, res){
+        var id = req.body.Request_id;
+        var sellerA = req.body.seller_A;
+        var sellerB = req.body.seller_B;
+        var userA = req.body.user_A;
+        var userB = req.body.user_B;
+        var pointA = req.body.point_A;
+        var pointB = req.body.point_B;
+
+
+        var curret_date = new Date();
+        var dateStr = curret_date.getFullYear()+''+curret_date.getMonth()+''+curret_date.getDate();
+        var tmpID = sellerA+'-'+sellerB+'-'+dateStr+'-'+id;
+        console.log('got responseStore request');
+        g_cc.invoke.init_transaction([tmpID,userA,userB,sellerA,sellerB,pointA,pointB,''+Date.parse(new Date())],function(err,resp){
+            var ss = resp;
+            res.json({
+                "msg":ss,
+                "respond":true,
+                "record_id":id
+            });
+            console.log('success',ss);  
+        });
+    });
+
+//-------------------------------------------------------------------------------------
+//-----------------API FOR DEV--------------------------------------------------------
+
+
     app.get('/testGet', function(req, res){
       res.json({"msg":"test"});
     });
@@ -110,7 +216,7 @@
         g_cc.query.read(['read','_pointindex'],function(err,resp){
             if(!err){
                 //var ss = resp.result.message;
-                res.json({"msg":resp});
+                res.json(JSON.parse(resp));
                 console.log('success',resp);  
             }else{
                 console.log('fail');
@@ -122,7 +228,7 @@
         g_cc.query.read(['read','_minimaltx'],function(err,resp){
             if(!err){
                 //var ss = resp.result.message;
-                res.json({"msg":resp});
+                res.json({"msg":JSON.parse(resp)});
                 console.log('success',resp);  
             }else{
                 console.log('fail');
@@ -135,7 +241,7 @@
         g_cc.query.read(['read',key],function(err,resp){
             if(!err){
                 //var ss = resp.result.message;
-                res.json({"msg":resp});
+                res.json({"msg":JSON.parse(resp)});
                 console.log('success',resp);  
             }else{
                 console.log('fail');
@@ -143,37 +249,8 @@
         });
     });
 
-    app.post('/query_tx_latest', function(req, res){
-        var seller = req.body.seller;
-        var num = req.body.num;
-        console.log('got read key request');
-        g_cc.query.read(['findLatest',seller,num],function(err,resp){
-            if(!err){
-                //var ss = resp.result.message;
-                res.json({"msg":resp});
-                console.log('success',resp);  
-            }else{
-                console.log('fail');
-            }
-        });
-    });
 
-    app.get('/read_b', function(req, res){
-        console.log('got read b request');
-        g_cc.query.query(['b'],function(err,resp){
-            //var ss = resp.result.message;
-            res.json({"msg":resp});
-            console.log('success',resp);  
-        });
-    });
-    app.get('/init', function(req, res){
-        console.log('got init request');
-        g_cc.invoke.init(['a','5','b','10'],function(err,resp){
-            var ss = resp.result.message;
-            res.json({"msg":ss});
-            console.log('success',ss);  
-        });
-    });
+
     app.get('/chain_stats', function(req, res){
         console.log('got stat request');
         ibc.chain_stats(function(e, stats){
@@ -201,30 +278,7 @@
         });
     });
 
-    app.post('/record', function(req, res){
-        var id = req.body.id;
-        var sellerA = req.body.sellerA;
-        var sellerB = req.body.sellerB;
-        var userA = req.body.userA;
-        var userB = req.body.userB;
-        var pointA = req.body.pointA;
-        var pointB = req.body.pointB;
-
-
-        var curret_date = new Date();
-        var dateStr = curret_date.getFullYear()+''+curret_date.getMonth()+''+curret_date.getDate();
-        var tmpID = sellerA+'-'+sellerB+'-'+dateStr+'-'+id;
-        console.log('got init_transaction request');
-        g_cc.invoke.init_transaction([tmpID,userA,userB,pointA,pointB],function(err,resp){
-            var ss = resp;
-            res.json({
-                "msg":ss,
-                "is_success":true,
-                "record_id":id
-            });
-            console.log('success',ss);  
-        });
-    });
+    
 
     app.post('/getpointdetail', function(req, res){
         var id = req.body.point_id;
@@ -261,6 +315,16 @@
 
         });
     });
+    app.post('/testPost',function(req,res){
+        var foo = req.body.foo;
+        var bar = req.body.FOO;
+        res.json({"foo":foo,"FOO":bar});
+    });
      
-
+    function padZ(s){
+        if (s.toString().length ==1){
+            return '0'+s;   
+        }
+        return s;
+    }
     
